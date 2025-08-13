@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ixtools"
+version = "0.1.0"
+description = "Herramientas internas para VortexOS y AstraOS"
+authors = [
+    { name = "IxxeCODE", email = "ixxe.code@gmail.com" }
+]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = []
+
+[tool.setuptools.packages.find]
+include = ["ix", "ix.*", "ix.modules", "ix.modules.*"]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ix = ["data/*.toml"]
+
+[project.scripts]
+ix = "ix.core:main"

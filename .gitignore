@@ -1,0 +1,16 @@
+# Archivos temporales de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+
+# Archivos de build
+*.egg-info/
+dist/
+build/
+
+# Configuraciones locales
+.env
