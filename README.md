@@ -3,30 +3,55 @@
 ixtools es un conjunto de herramientas internas para VortexOS, AstraOS y sistemas basados en Linux, diseñado para automatizar tareas, optimizar flujos de trabajo y centralizar utilidades del sistema.
 El objetivo es mantener un ecosistema limpio, modular y totalmente controlado por el usuario.
 
+---
+
 ## 📦 Versión actual
 
 v2.0.0 — Modular y escalable
 
-Core actualizado con soporte --version global.
+Core actualizado con soporte global --version y --about.
 
-Al invocar un módulo sin argumentos, muestra su versión y ayuda automáticamente.
+Al invocar un módulo sin argumentos, muestra automáticamente ayuda o listado de recursos.
 
-Listado de módulos muestra nombre, versión y descripción.
+Módulos list e image actualizados: salida clara, orden alfabético, errores robustos, mensajes estandarizados.
 
-Módulos list e image mejorados: salida clara, orden alfabético y errores robustos.
+Arquitectura modular lista para integrar nuevos módulos automáticamente (_image_data en image como ejemplo).
 
-Arquitectura modular preparada para integrar nuevos módulos automáticamente.
+Mensajes centralizados en messages.py para consistencia y fácil mantenimiento.
+
+---
 
 ## 📂 Estructura del proyecto
 ```bash
 ixtools/
-├── core.py        # Punto de entrada principal
-├── modules/       # Módulos y herramientas reutilizables
-│   ├── list.py    # Lista todos los módulos y su descripción
-│   └── image.py   # Gestión de archivos .AppImage y accesos directos
-├── scripts/       # Herramientas individuales adicionales
-└── docs/          # Documentación técnica y guía de desarrollo
+├── src/
+│   └──ix/
+│       ├── __init__.py
+│       ├── core.py                 # Punto de entrada principal
+│       ├── logger.py               # Módulo de logging interno
+│       ├── config.py               # Configuraciones globales de ixtools
+│       └── modules/                # Módulos y herramientas reutilizables
+│           ├── __init__.py
+│           ├── list.py             # Lista todos los módulos y su descripción
+│           ├── image.py            # Gestión de archivos .AppImage y accesos directos
+│           └── _image_data/        # Funciones internas de image
+│               ├── __init__.py
+│               ├── create_desktop.py
+│               ├── delete_desktop.py
+│               ├── list_all_desktops.py
+│               ├── list_appimages.py
+│               ├── list_desktops.py
+│               └── messages.py
+├── tests/                  # Tests de los módulos
+├── .gitignore
+├── README.md
+├── LICENSE
+├── pyproject.toml
+└── requirements.txt
 ```
+
+    Nota: La carpeta data/ se utiliza para almacenar información persistente o compartida entre módulos, y _image_data/ contiene todas las funciones internas de image para mantener modularidad y escalabilidad.
+
 ## ⚙️ Instalación en modo editable (desarrollo)
 ```bash
 git clone https://github.com/<usuario>/ixtools.git
@@ -34,51 +59,62 @@ cd ixtools
 pip install -e .
 ```
 
-Nota: Actualmente, ixtools funciona dentro del entorno virtual de desarrollo.
-En futuras versiones se implementará instalación global.
+    Nota: Actualmente, ixtools funciona dentro del entorno virtual de desarrollo. En futuras versiones se implementará instalación global.
 
 ## 🖥️ Uso básico y comandos disponibles
 ### 1. Mostrar versión de ixtools
+```bash
 ix --version
-
+```
 
 Salida:
-
-ixtools version v2.0.0
+```bash
+[ixtools] ix v2.0.0
+```
 
 ### 2. Listar todos los módulos disponibles
+```bash
 ix list
-
+```
 
 Salida:
-
+```bash
 Herramientas disponibles:
 - list      | v2.0.0  → Lista todos los módulos/herramientas disponibles en Ixtools
 - image     | v1.1.0  → Gestiona archivos .AppImage y sus accesos directos (.desktop)
-
+```
 ### 3. Gestionar archivos .AppImage
-ix image list        # Lista archivos .AppImage en la carpeta actual
-ix image -d          # Lista solo los .desktop creados por ixtools
-ix image -d delete <archivo.desktop>  # Elimina un .desktop creado por ixtools
-ix image -d-s        # Lista todos los .desktop del usuario, incluyendo los del sistema
-ix image <Archivo.AppImage> [icono]   # Crea un .desktop para un AppImage
+#### Listar todos los AppImage en la carpeta actual
+```bash
+ix image list appimage
+```
 
+#### Listar solo los .desktop creados por ixtools
+```bash
+ix image list desktop
+```
 
-Todos los módulos ahora muestran ayuda automáticamente si se ejecutan sin argumentos:
+#### Listar todos los .desktop del usuario, incluyendo los del sistema
+```bash
+ix image list desktop --system
+```
 
+#### Crear un .desktop para un AppImage
+```bash
+ix image create MiApp.AppImage [icono]
+```
+
+#### Eliminar un .desktop creado por ixtools
+```bash
+ix image delete MiApp.desktop
+```
+
+#### Mostrar ayuda del módulo
+```bash
 ix image
+```
 
-## 🛠️ Próximos pasos
-
-Añadir nuevos módulos: pkg, config, sysinfo, etc.
-
-Mejorar manejo de rutas y parámetros en módulos existentes.
-
-Extender soporte a instalación global.
-
-Documentar cada comando en /docs con ejemplos y versiones.
-
-Integración futura de scripts automáticos para CI/CD y tests modulares.
+Todos los módulos ahora muestran ayuda automáticamente si se ejecutan sin argumentos.
 
 ## 📜 Licencia
 
@@ -87,13 +123,13 @@ Consulta el archivo LICENSE para más detalles.
 
 ## 📌 Notas para desarrolladores
 
-Los comentarios # TODO: marcan ideas o funcionalidades pendientes.
-
 Mantener el código documentado y consistente garantiza escalabilidad.
 
 Cada módulo debe ejecutarse y testearse de forma independiente.
 
-Todos los módulos deben implementar __version__ y __desc__.
+Todos los módulos deben implementar __version__, __desc__ y __author__.
+
+Los mensajes deben centralizarse para mantener uniformidad (messages.py en image como referencia).
 
 ## 🤝 Contribuciones
 

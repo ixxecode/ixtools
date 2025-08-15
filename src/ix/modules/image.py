@@ -8,180 +8,138 @@
 #               (ver archivo LICENSE para detalles completos)
 # ====================================================
 
-__version__ = "v1.1.0"
+__version__ = "v2.0.0"
 __desc__ = "Gestiona archivos .AppImage para listarlos o crear accesos directos (.desktop) y configurarlos."
 __author__ = "IxxeCODE"
 
 import os
 import sys
 
+# Importar funciones desde la carpeta _image_data
+from ix.modules._image_data.list_appimages import list_appimages
+from ix.modules._image_data.list_desktops import list_desktops
+from ix.modules._image_data.list_all_desktops import list_all_desktops
+from ix.modules._image_data.delete_desktop import delete_desktop
+from ix.modules._image_data.create_desktop import create_desktop
+from ix.modules._image_data.messages import (
+    PREFIX,
+    ERROR_FILE_NOT_FOUND,
+    ERROR_NOT_APPIMAGE,
+    ERROR_INVALID_COMMAND,
+    ERROR_INVALID_SUBCOMMAND,
+    USAGE_CREATE,
+    USAGE_DELETE,
+    USAGE_LIST,
+    USAGE_EDIT,
+    USAGE_UPDATE
+)
+
 def run(args):
-    if not args or args[0] in ["--help", "-h"]:
+    """
+    Función principal para manejar los comandos relacionados con AppImage.
+    Actúa como un compositor que dirige las llamadas a las funciones específicas
+    ubicadas en la carpeta _image_data.
+
+    Args:
+        args (list): Una lista de argumentos de línea de comandos.
+    """
+    # Manejo de comandos globales como --version, --about, -h, --help
+    if "--version" in args:
+        print(f"{PREFIX} ix image {__version__}")
+        return
+    if "--about" in args:
+        print(f"{PREFIX} {__desc__}")
+        return
+    if not args or args[0] in ["-h", "--help"]:
         print_help()
         return
 
-    cmd = args[0].lower()
-    if cmd == "list":
-        list_appimages()
-    elif cmd == "-d":
-        if len(args) == 1:
+    # Si no se proporcionan argumentos, por defecto se lista los desktops de ixtools
+    if not args:
+        list_desktops()
+        return
+
+    # Ajustar args si el primer elemento es el nombre del script 'image'
+    if args[0].lower() == "image":
+        args = args[1:]
+        if not args: # Si después de quitar 'image' no quedan argumentos, mostrar ayuda o default
             list_desktops()
-        elif len(args) == 2 and args[1].lower() == "delete":
-            print("Uso: ix image -d delete <archivo.desktop>")
-        elif len(args) == 3 and args[1].lower() == "delete":
-            delete_desktop(args[2])
+            return
+
+    cmd = args[0].lower()
+
+    # Diccionario para mapear subcomandos de 'list' a sus funciones
+    list_commands = {
+        "appimage": list_appimages,
+        "desktop": list_desktops,
+    }
+
+    if cmd == "create":
+        if len(args) < 2:
+            print(USAGE_CREATE)
+            return
+        appimage_file = args[1]
+        if not os.path.isfile(appimage_file):
+            print(ERROR_FILE_NOT_FOUND.format(appimage_file))
+            return
+        if not appimage_file.lower().endswith(".appimage"):
+            print(ERROR_NOT_APPIMAGE.format(appimage_file))
+            return
+        # Llama a la función para crear un archivo .desktop
+        create_desktop(appimage_file, args[2] if len(args) > 2 else None)
+    elif cmd == "delete":
+        if len(args) < 2:
+            print(USAGE_DELETE)
+            return
+        desktop_file = args[1]
+        # La validación de existencia y tipo .desktop se maneja dentro de delete_desktop
+        delete_desktop(desktop_file)
+    elif cmd == "list":
+        if len(args) < 2:
+            print(USAGE_LIST)
+            return
+        sub_cmd = args[1].lower()
+        if sub_cmd == "desktop" and len(args) > 2 and args[2].lower() == "--system":
+            # Llama a la función para listar todos los archivos .desktop
+            list_all_desktops()
+        elif sub_cmd in list_commands:
+            # Llama a la función correspondiente del diccionario
+            list_commands[sub_cmd]()
         else:
-            print("Uso: ix image -d [delete <archivo.desktop>]")
-    elif cmd == "-d-s":
-        list_all_desktops()
+            print(ERROR_INVALID_SUBCOMMAND.format(sub_cmd))
+    elif cmd == "edit":
+        print(USAGE_EDIT)
+    elif cmd == "update":
+        print(USAGE_UPDATE)
     else:
-        create_desktop(args[0], args[1] if len(args) > 1 else None)
-
-def list_appimages():
-    cwd = os.getcwd()
-    appimages = [f for f in os.listdir(cwd) if f.lower().endswith(".appimage")]
-    if not appimages:
-        print("No se encontraron archivos .AppImage en la carpeta actual.")
-        return
-    print("Archivos .AppImage encontrados:")
-    for i, file in enumerate(appimages, 1):
-        print(f"{i}. {file}")
-
-def list_desktops():
-    desktop_dir = os.path.expanduser("~/.local/share/applications")
-    if not os.path.exists(desktop_dir):
-        print("No se encontraron archivos .desktop.")
-        return
-
-    desktop_files = []
-    for f in os.listdir(desktop_dir):
-        if f.lower().endswith(".desktop"):
-            file_path = os.path.join(desktop_dir, f)
-            try:
-                with open(file_path, "r") as desktop_file:
-                    content = desktop_file.read()
-                    if "X-Created-By=ixtools" in content:
-                        desktop_files.append(f)
-            except Exception as e:
-                print(f"Advertencia: No se pudo leer el archivo {f}: {e}", file=sys.stderr)
-
-    desktop_files.sort() # Ordenar alfabéticamente
-
-    if not desktop_files:
-        print("No se encontraron archivos .desktop creados por ixtools.")
-        return
-
-    print("Archivos .desktop creados por ixtools:")
-    for i, file in enumerate(desktop_files, 1):
-        print(f"{i}. {file}")
-
-def list_all_desktops():
-    desktop_dir = os.path.expanduser("~/.local/share/applications")
-    if not os.path.exists(desktop_dir):
-        print("No se encontraron archivos .desktop.")
-        return
-
-    all_desktop_files = []
-    for f in os.listdir(desktop_dir):
-        if f.lower().endswith(".desktop"):
-            file_path = os.path.join(desktop_dir, f)
-            try:
-                with open(file_path, "r") as desktop_file:
-                    content = desktop_file.read()
-                    if "X-Created-By=ixtools" in content:
-                        all_desktop_files.append((f, "[ixtools]"))
-                    else:
-                        all_desktop_files.append((f, "[system]"))
-            except Exception as e:
-                print(f"Advertencia: No se pudo leer el archivo {f}: {e}", file=sys.stderr)
-
-    all_desktop_files.sort(key=lambda x: x[0]) # Ordenar alfabéticamente por nombre de archivo
-
-    if not all_desktop_files:
-        print("No se encontraron archivos .desktop.")
-        return
-
-    print("Todos los archivos .desktop encontrados:")
-    for i, (file, origin) in enumerate(all_desktop_files, 1):
-        print(f"{i}. {file} {origin}")
-
-def delete_desktop(desktop_filename):
-    desktop_dir = os.path.expanduser("~/.local/share/applications")
-    desktop_path = os.path.join(desktop_dir, desktop_filename)
-
-    if not os.path.exists(desktop_path):
-        print(f"Error: no se encontró el archivo '{desktop_filename}'.")
-        return
-    
-    if not desktop_filename.lower().endswith(".desktop"):
-        print("Error: el archivo especificado no es un .desktop.")
-        return
-
-    try:
-        os.remove(desktop_path)
-        print(f"[OK] Archivo .desktop '{desktop_filename}' eliminado.")
-    except OSError as e:
-        print(f"Error al eliminar el archivo '{desktop_filename}': {e}")
-
-def create_desktop(appimage_path, icon_path=None):
-    appimage_path = os.path.abspath(appimage_path)
-
-    if not os.path.exists(appimage_path):
-        print(f"Error: no se encontró el archivo '{appimage_path}'.")
-        return
-
-    if not appimage_path.lower().endswith(".appimage"):
-        print("Error: el archivo no es un .AppImage.")
-        return
-
-    app_name = os.path.splitext(os.path.basename(appimage_path))[0]
-    icon_path = icon_path or "application-x-executable"
-
-    desktop_entry = f"""[Desktop Entry]
-Version=1.0
-Type=Application
-Name={app_name}
-Comment=AppImage ejecutable
-Exec="{appimage_path}"
-Icon={icon_path}
-Terminal=false
-Categories=Utility;
-X-Created-By=ixtools
-"""
-
-    desktop_dir = os.path.expanduser("~/.local/share/applications")
-    os.makedirs(desktop_dir, exist_ok=True)
-
-    desktop_path = os.path.join(desktop_dir, f"{app_name}.desktop")
-    with open(desktop_path, "w") as f:
-        f.write(desktop_entry)
-
-    os.chmod(appimage_path, 0o755)
-    os.chmod(desktop_path, 0o755)
-
-    print(f"[OK] Archivo .desktop creado en: {desktop_path}")
-    print("Puedes buscarlo en tu lanzador de aplicaciones.")
+        print(ERROR_INVALID_COMMAND.format(cmd))
 
 def print_help():
-    print("""
-Uso: ix image <archivo.AppImage> [icono]
-       ix image list
-       ix image -d [delete <archivo.desktop>]
-       ix image -d-s
+    print(f"""
+Uso: ix image [comando] [argumentos]
        
 Descripción:
-  Gestiona archivos .AppImage y sus accesos directos (.desktop).
+  {__desc__}
 
 Comandos:
-  <archivo.AppImage> [icono]   → Crea un .desktop para el AppImage especificado. 
-  list                         → Lista todos los AppImage en la carpeta actual.
-  -d                           → Lista solo los .desktop creados por ixtools.
-  -d delete <archivo.desktop>  → Elimina un .desktop creado por ixtools.
-  -d-s                         → Lista todos los .desktop del usuario, incluyendo los del sistema.
+  create <archivo.AppImage> [icono]   → Crea un .desktop para el AppImage especificado.
+  delete <archivo.desktop>            → Elimina un .desktop creado por ixtools.
+  edit <archivo.desktop>              → Edita un .desktop (no implementado).
+  update <archivo.desktop> <appimage> → Actualiza la ruta de un .desktop (no implementado).
+  list appimage                       → Lista todos los AppImage en la carpeta actual.
+  list desktop                        → Lista solo los .desktop creados por ixtools.
+  list desktop --system               → Lista todos los .desktop del usuario, incluyendo los del sistema.
+
+Opciones globales:
+  --version                           → Muestra la versión de la herramienta.
+  --about                             → Muestra la descripción de la herramienta.
+  -h, --help                          → Muestra esta ayuda.
 
 Ejemplos:
-  ix image Archivo.AppImage
-  ix image list
-  ix image -d
-  ix image -d delete Archivo.desktop
+  ix image create MiApp.AppImage
+  ix image delete MiApp.desktop
+  ix image list appimage
+  ix image list desktop
+  ix image list desktop --system
+  ix image --version
 """)
